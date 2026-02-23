@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COSMO · Kehyly Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0a0a0c; --surface:#111116; --surface2:#18181f;
+  --border:#252530; --border2:#2e2e3e;
+  --accent:#c9a96e; --green:#5ecb82; --red:#e86b6b;
+  --blue:#6aabf0; --purple:#a98df5; --orange:#f0a06a;
+  --text:#ede9e3; --muted:#686878; --muted2:#4a4a5a;
+  --radius:16px; --radius-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 15% 0%,rgba(201,169,110,.07) 0%,transparent 55%),
+             radial-gradient(ellipse at 85% 100%,rgba(94,203,130,.04) 0%,transparent 50%);}
+
+/* ── LOADING ── */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:300;transition:opacity .5s;}
+.loading-screen.hidden{opacity:0;pointer-events:none;}
+.loading-logo{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:700;color:var(--accent);letter-spacing:.2em;}
+.loading-bar-wrap{width:140px;height:2px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.loading-bar{height:100%;width:0;background:var(--accent);animation:lb 1.8s ease forwards;}
+@keyframes lb{to{width:100%;}}
+.loading-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;}
+
+/* ── LOGIN SCREEN ── */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200;transition:opacity .4s;}
+.login-screen.hidden{opacity:0;pointer-events:none;}
+.login-box{width:100%;max-width:380px;padding:0 20px;}
+.login-logo{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:700;color:var(--accent);letter-spacing:.22em;text-align:center;margin-bottom:6px;}
+.login-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;text-align:center;margin-bottom:36px;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px;}
+.login-title{font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:4px;}
+.login-desc{font-size:12px;color:var(--muted);margin-bottom:22px;line-height:1.55;}
+.login-field{margin-bottom:14px;}
+.login-field label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.login-field input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:11px 14px;outline:none;}
+.login-field input:focus{border-color:var(--accent);}
+.login-btn{width:100%;margin-top:6px;padding:13px;background:var(--accent);color:#0a0a0c;border:none;border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.login-btn:hover{opacity:.88;}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;}
+.login-error{margin-top:12px;font-size:12px;color:var(--red);font-family:'DM Mono',monospace;text-align:center;display:none;}
+.login-error.visible{display:block;}
+
+/* ── APP ── */
+.app{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:28px 18px 80px;display:none;}
+.app.visible{display:block;}
+
+header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:14px;}
+.logo-brand{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;letter-spacing:.18em;color:var(--accent);line-height:1;}
+.logo-row{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase;}
+.info-btn{background:transparent;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;color:var(--muted);transition:all .2s;}
+.info-btn:hover{border-color:var(--accent);color:var(--accent);}
+.header-right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+.date-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text);text-transform:capitalize;}
+.sync-badge{font-family:'DM Mono',monospace;font-size:10px;color:var(--green);letter-spacing:.08em;}
+.sync-badge.syncing{color:var(--accent);}
+.sync-badge.error{color:var(--red);}
+.user-chip{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.user-chip span{color:var(--text);}
+.logout-btn{background:transparent;border:none;color:var(--muted);font-size:11px;cursor:pointer;transition:color .2s;font-family:'DM Mono',monospace;}
+.logout-btn:hover{color:var(--red);}
+
+.role-bio{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:20px;display:none;}
+.role-bio.visible{display:block;}
+.role-bio-text{font-size:13px;color:var(--muted);line-height:1.75;}
+.role-bio-text strong{color:var(--text);}
+
+.tabs{display:flex;gap:3px;margin-bottom:28px;background:var(--surface);border-radius:var(--radius);padding:4px;border:1px solid var(--border);}
+.tab-btn{flex:1;padding:10px 4px;border:none;background:transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:12px;transition:all .2s;white-space:nowrap;}
+.tab-btn.active{background:var(--accent);color:#0a0a0c;font-weight:500;}
+.tab-btn.ceo-tab{border:1px solid rgba(240,160,106,.2);}
+.tab-btn.ceo-tab.active{background:var(--orange);}
+
+.view{display:none;}
+.view.active{display:block;}
+
+/* ── CEO LOGIN MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:150;opacity:0;pointer-events:none;transition:opacity .3s;}
+.modal-overlay.visible{opacity:1;pointer-events:all;}
+.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:32px 28px;width:100%;max-width:360px;text-align:center;}
+.modal-icon{font-size:36px;margin-bottom:12px;}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:24px;margin-bottom:6px;}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.65;}
+.modal-field{margin-bottom:12px;text-align:left;}
+.modal-field label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.modal-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:11px 14px;outline:none;}
+.modal-input:focus{border-color:var(--orange);}
+.modal-input.shake{animation:shake .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}
+}
+.modal-btn{width:100%;margin-top:4px;padding:13px;background:var(--orange);color:#0a0a0c;border:none;border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.modal-btn:hover{opacity:.88;}
+.modal-cancel{margin-top:12px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;background:none;border:none;letter-spacing:.1em;text-transform:uppercase;}
+.modal-cancel:hover{color:var(--text);}
+.modal-error{font-size:11px;color:var(--red);margin-top:10px;font-family:'DM Mono',monospace;display:none;}
+.modal-error.visible{display:block;}
+
+/* ── PROGRESS ── */
+.progress-strip{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;display:flex;align-items:center;gap:18px;margin-bottom:20px;flex-wrap:wrap;}
+.ring-wrap{position:relative;width:64px;height:64px;flex-shrink:0;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:var(--border2);stroke-width:5;}
+.ring-fill{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset .6s ease;}
+.ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);}
+.prog-info{flex:1;min-width:160px;}
+.prog-title{font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:2px;}
+.prog-sub{font-size:12px;color:var(--muted);}
+.current-block-chip{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:6px 14px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;white-space:nowrap;}
+
+/* ── MISSIONS PREVIEW ── */
+.missions-preview{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;}
+.missions-preview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.missions-preview-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);}
+.missions-preview-week{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.mission-mini{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(37,37,48,.6);}
+.mission-mini:last-child{border-bottom:none;padding-bottom:0;}
+.mission-mini-check{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border2);background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent;margin-top:2px;cursor:pointer;transition:all .18s;}
+.mission-mini-check:hover{border-color:var(--orange);}
+.mission-mini-check.done{background:var(--orange);border-color:var(--orange);color:#0a0a0c;}
+.mission-mini-body{flex:1;min-width:0;}
+.mission-mini-name{font-size:13px;font-weight:500;margin-bottom:2px;}
+.mission-mini-name.done{color:var(--muted);text-decoration:line-through;}
+.mission-mini-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+.mission-mini-upload{flex-shrink:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:2px;}
+.mission-mini-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.upload-icon-btn{width:28px;height:28px;border-radius:7px;border:1.5px solid var(--border2);background:transparent;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .18s;color:var(--muted);}
+.upload-icon-btn:hover{border-color:var(--orange);color:var(--orange);}
+.upload-icon-btn.has-files{border-color:rgba(240,160,106,.5);color:var(--orange);background:rgba(240,160,106,.08);}
+.mini-file-count{font-family:'DM Mono',monospace;font-size:8px;color:var(--orange);letter-spacing:.05em;}
+.no-missions-msg{font-size:12px;color:var(--muted);font-style:italic;}
+
+.alert-banner{background:rgba(232,107,107,.08);border:1px solid rgba(232,107,107,.3);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--red);display:none;align-items:center;gap:10px;}
+.alert-banner.visible{display:flex;}
+
+/* ── BLOCKS ── */
+.block-wrap{margin-bottom:16px;}
+.block-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer;user-select:none;}
+.block-time{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--muted);white-space:nowrap;min-width:105px;}
+.block-pill{display:flex;align-items:center;gap:8px;flex:1;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:8px 14px;transition:border-color .2s;}
+.block-pill:hover{border-color:var(--border2);}
+.block-pill.active-block{border-color:rgba(201,169,110,.4);background:rgba(201,169,110,.04);}
+.block-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.block-name{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text);}
+.block-pct{font-family:'DM Mono',monospace;font-size:10px;margin-left:auto;}
+.block-chevron{margin-left:6px;font-size:10px;color:var(--muted);transition:transform .25s;}
+.block-header.open .block-chevron{transform:rotate(180deg);}
+.block-tasks{display:none;padding-left:117px;}
+.block-tasks.open{display:block;}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 15px;margin-bottom:6px;display:flex;align-items:flex-start;gap:12px;transition:border-color .2s,background .2s;}
+.task-card:hover{border-color:var(--border2);}
+.task-card.done{background:rgba(94,203,130,.03);border-color:rgba(94,203,130,.2);}
+.check-btn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border2);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .18s;margin-top:1px;font-size:11px;color:transparent;}
+.check-btn:hover{border-color:var(--green);}
+.task-card.done .check-btn{background:var(--green);border-color:var(--green);color:#0a0a0c;}
+.task-body{flex:1;min-width:0;}
+.task-name{font-size:13px;font-weight:500;margin-bottom:2px;transition:color .2s;}
+.task-card.done .task-name{color:var(--muted);text-decoration:line-through;}
+.task-desc{font-size:11px;color:var(--muted);line-height:1.55;}
+.task-count-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.count-input{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:4px 9px;width:72px;text-align:center;outline:none;}
+.count-input:focus{border-color:var(--accent);}
+.count-lbl{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.1em;}
+.block-divider{display:flex;align-items:center;gap:12px;margin:6px 0 16px;padding-left:117px;}
+.block-divider-line{flex:1;height:1px;background:var(--border);}
+.block-divider-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--muted2);text-transform:uppercase;}
+
+/* ── EOD ── */
+.eod-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-top:10px;transition:border-color .4s;}
+.eod-wrap.alert{border-color:rgba(232,107,107,.4);}
+.eod-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.eod-title{font-family:'Cormorant Garamond',serif;font-size:20px;flex:1;}
+.eod-alert-dot{width:8px;height:8px;border-radius:50%;background:var(--red);display:none;animation:pulse 1.5s infinite;}
+.eod-alert-dot.visible{display:block;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.eod-fields{display:grid;gap:11px;}
+.eod-row-2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.eod-field label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.eod-field input,.eod-field textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 13px;outline:none;resize:vertical;}
+.eod-field input:focus,.eod-field textarea:focus{border-color:var(--accent);}
+.eod-field textarea{min-height:68px;}
+.eod-utilidad{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 13px;font-family:'DM Mono',monospace;font-size:13px;color:var(--green);}
+.eod-utilidad.negative{color:var(--red);}
+.save-btn{width:100%;margin-top:14px;padding:13px;background:var(--accent);color:#0a0a0c;border:none;border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:opacity .2s,transform .1s;}
+.save-btn:hover{opacity:.88;}
+.save-btn:active{transform:scale(.99);}
+
+/* ── CEO MISSIONS VIEW ── */
+.ceo-header-strip{background:linear-gradient(135deg,rgba(240,160,106,.08),rgba(240,160,106,.02));border:1px solid rgba(240,160,106,.25);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:16px;}
+.ceo-icon{font-size:28px;}
+.ceo-info{flex:1;}
+.ceo-title{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--orange);}
+.ceo-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.ceo-week{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:right;}
+.missions-progress{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.m-bar-wrap{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.m-bar{height:100%;border-radius:2px;background:var(--orange);transition:width .5s;}
+.m-bar-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);min-width:40px;text-align:right;}
+
+/* Mission cards */
+.mission-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;transition:border-color .2s;}
+.mission-card.done{background:rgba(240,160,106,.03);border-color:rgba(240,160,106,.2);}
+.mission-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
+.m-check-btn{width:26px;height:26px;border-radius:6px;border:1.5px solid var(--border2);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .18s;margin-top:2px;font-size:12px;color:transparent;}
+.m-check-btn:hover{border-color:var(--orange);}
+.mission-card.done .m-check-btn{background:var(--orange);border-color:var(--orange);color:#0a0a0c;}
+.mission-card-body{flex:1;min-width:0;}
+.mission-card-title{font-size:14px;font-weight:500;margin-bottom:4px;transition:color .2s;}
+.mission-card.done .mission-card-title{color:var(--muted);text-decoration:line-through;}
+.mission-card-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:6px;}
+.m-del-btn{background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;padding:4px 8px;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;flex-shrink:0;}
+.m-del-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* Evidence section */
+.evidence-section{border-top:1px solid var(--border);padding-top:12px;margin-top:4px;}
+.evidence-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.evidence-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.evidence-item{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;}
+.evidence-icon{font-size:14px;flex-shrink:0;}
+.evidence-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+.evidence-link{font-family:'DM Mono',monospace;font-size:10px;color:var(--blue);text-decoration:none;flex-shrink:0;}
+.evidence-link:hover{text-decoration:underline;}
+.evidence-del{background:transparent;border:none;color:var(--muted2);cursor:pointer;font-size:12px;flex-shrink:0;transition:color .2s;}
+.evidence-del:hover{color:var(--red);}
+.upload-zone{border:1.5px dashed var(--border2);border-radius:8px;padding:12px 16px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative;}
+.upload-zone:hover{border-color:var(--orange);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-zone-text{font-size:12px;color:var(--muted);}
+.upload-zone-text span{color:var(--orange);}
+.upload-progress{font-family:'DM Mono',monospace;font-size:10px;color:var(--orange);margin-top:6px;display:none;}
+.upload-progress.visible{display:block;}
+
+/* Add mission */
+.add-mission-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-top:6px;}
+.add-mission-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.add-fields{display:grid;gap:10px;}
+.add-field label{display:block;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.add-field input,.add-field textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 13px;outline:none;resize:vertical;}
+.add-field input:focus,.add-field textarea:focus{border-color:var(--orange);}
+.add-field textarea{min-height:60px;}
+.add-btn{width:100%;margin-top:12px;padding:12px;background:var(--orange);color:#0a0a0c;border:none;border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.add-btn:hover{opacity:.88;}
+
+/* Stats */
+.stats-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 14px;text-align:center;}
+.kpi-val{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--accent);margin-bottom:3px;line-height:1;}
+.kpi-val.green{color:var(--green);}
+.kpi-val.red{color:var(--red);}
+.kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;}
+.chart-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.chart-title span{color:var(--text);}
+.chart-wrap{position:relative;height:220px;}
+.notes-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;}
+.note-day-name{font-family:'DM Mono',monospace;font-size:9px;text-align:center;color:var(--muted);padding:4px 0;}
+.note-cell{aspect-ratio:1;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;min-height:32px;position:relative;gap:2px;}
+.note-cell:hover{border-color:var(--border2);}
+.note-cell.empty-cell{background:transparent;border-color:transparent;cursor:default;}
+.note-cell.today-cell{border-color:rgba(201,169,110,.4);}
+.note-cell.has-note{background:rgba(110,207,130,.08);border-color:rgba(94,203,130,.3);}
+.note-cell .nc-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.note-cell.has-note .nc-num{color:var(--green);}
+.note-cell .nc-dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.note-detail{margin-top:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px 16px;display:none;}
+.note-detail.visible{display:block;}
+.note-detail-date{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.note-detail-text{font-size:13px;color:var(--text);line-height:1.65;}
+.bars-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-top:16px;}
+.bars-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.hstat-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.hstat-name{font-size:12px;min-width:190px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hstat-bar-wrap{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.hstat-bar{height:100%;border-radius:3px;background:var(--accent);transition:width .6s;}
+.hstat-pct{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-width:32px;text-align:right;}
+
+/* Calendar */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.cal-nav{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:15px;transition:border-color .2s;}
+.cal-nav:hover{border-color:var(--accent);}
+.cal-month{font-family:'Cormorant Garamond',serif;font-size:24px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-day-name{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.15em;text-align:center;color:var(--muted);padding:6px 0;text-transform:uppercase;}
+.cal-cell{aspect-ratio:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color .2s;gap:1px;min-height:46px;position:relative;}
+.cal-cell:hover{border-color:var(--border2);}
+.cal-cell.empty{background:transparent;border-color:transparent;cursor:default;}
+.cal-cell.today{border-color:rgba(201,169,110,.5);}
+.cal-cell.has-data{background:var(--surface2);}
+.cal-cell .x-mark{font-size:15px;color:var(--green);line-height:1;}
+.cal-cell .day-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1;}
+.cal-cell.has-data .day-num{color:var(--text);}
+.cal-cell .pct-badge{font-family:'DM Mono',monospace;font-size:8px;color:var(--green);}
+.cal-cell .note-indicator{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--blue);}
+.day-detail{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;display:none;}
+.day-detail.visible{display:block;}
+.detail-date{font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.detail-fin-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.detail-fin-chip{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:11px;}
+.detail-fin-chip span{display:block;font-size:9px;color:var(--muted);letter-spacing:.1em;margin-bottom:3px;}
+.detail-block-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;}
+.detail-row{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid rgba(37,37,48,.7);font-size:12px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-check{color:var(--green);font-size:13px;flex-shrink:0;margin-top:1px;}
+.detail-x{color:var(--red);font-size:13px;flex-shrink:0;margin-top:1px;}
+.detail-name{flex:1;}
+.detail-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);}
+.detail-notes{margin-top:14px;padding:12px 14px;background:var(--surface2);border-radius:10px;border-left:3px solid var(--blue);font-size:12px;color:var(--text);line-height:1.65;}
+.detail-notes strong{color:var(--muted);display:block;margin-bottom:5px;font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;}
+
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--green);color:var(--text);padding:11px 18px;border-radius:10px;font-size:12px;opacity:0;transform:translateY(8px);transition:all .3s;z-index:400;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.err{border-color:var(--red);}
+
+@media(max-width:620px){
+  .block-time{min-width:80px;font-size:9px;}
+  .block-tasks{padding-left:92px;}
+  .block-divider{padding-left:92px;}
+  .hstat-name{min-width:130px;}
+  .eod-row-2{grid-template-columns:1fr;}
+  .tab-btn{font-size:9px;letter-spacing:.05em;padding:10px 2px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">COSMO</div>
+  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  <div class="loading-sub">Iniciando operaciones...</div>
+</div>
+
+<!-- Login -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">COSMO</div>
+    <div class="login-sub">Sistema de Gestión Operativa</div>
+    <div class="login-card">
+      <div class="login-title">Acceso al sistema</div>
+      <div class="login-desc">Ingresa tus credenciales para acceder a tu panel de operaciones diarias.</div>
+      <div class="login-field">
+        <label>Correo electrónico</label>
+        <input type="email" id="loginEmail" placeholder="tu@cosmo.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="············" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">INGRESAR AL SISTEMA</button>
+      <div class="login-error" id="loginError">Credenciales incorrectas. Verifica tu email y contraseña.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CEO Module Modal -->
+<div class="modal-overlay" id="ceoModal">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <div class="modal-title">Módulo CEO</div>
+    <div class="modal-sub">Este módulo es de acceso exclusivo.<br>Ingresa tus credenciales de administrador para continuar.</div>
+    <div class="modal-field">
+      <label>Email CEO</label>
+      <input class="modal-input" type="email" id="ceoEmail" placeholder="ceo@cosmo.com">
+    </div>
+    <div class="modal-field">
+      <label>Contraseña</label>
+      <input class="modal-input" type="password" id="ceoPassword" placeholder="············" onkeydown="if(event.key==='Enter')checkCeoLogin()">
+    </div>
+    <button class="modal-btn" onclick="checkCeoLogin()">ACCEDER AL MÓDULO CEO</button>
+    <div class="modal-error" id="ceoModalError">Acceso denegado. Credenciales incorrectas.</div>
+    <button class="modal-cancel" onclick="closeCeoModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="mainApp">
+  <header>
+    <div class="logo">
+      <div class="logo-brand">COSMO</div>
+      <div class="logo-row">
+        <div class="logo-sub">Kehyly · COO · Daily Tracker</div>
+        <button class="info-btn" onclick="toggleBio()">ℹ</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="date-val" id="todayLabel">—</div>
+      <div class="sync-badge" id="syncBadge">● sincronizado</div>
+      <div class="user-chip">
+        <span id="userEmailChip">—</span>
+        <button class="logout-btn" onclick="doLogout()">salir</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="role-bio" id="roleBio">
+    <div class="role-bio-text">
+      <strong>Kehyly Lorena Castillo — Chief Operating Officer de COSMO.</strong>
+      Responsable de convertir la visión estratégica en operación real: lidera finanzas, producción,
+      atención al cliente y contenido digital con criterio analítico y enfoque en resultados.
+      Su rol es garantizar que cada proceso funcione con precisión para escalar la marca.
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('day',this)">Mi día</button>
+    <button class="tab-btn ceo-tab" onclick="handleCeoTab(this)">Módulo CEO</button>
+    <button class="tab-btn" onclick="switchTab('stats',this)">Estadísticas</button>
+    <button class="tab-btn" onclick="switchTab('calendar',this)">Calendario</button>
+  </div>
+
+  <!-- DAY VIEW -->
+  <div class="view active" id="view-day">
+    <div class="progress-strip">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 64 64" width="64" height="64">
+          <circle class="ring-bg" cx="32" cy="32" r="27"/>
+          <circle class="ring-fill" id="ringFill" cx="32" cy="32" r="27" stroke-dasharray="169.6" stroke-dashoffset="169.6"/>
+        </svg>
+        <div class="ring-text" id="pctText">0%</div>
+      </div>
+      <div class="prog-info">
+        <div class="prog-title" id="progTitle">Iniciando operaciones</div>
+        <div class="prog-sub" id="progSub">Cargando agenda...</div>
+      </div>
+      <div class="current-block-chip" id="currentBlockChip">—</div>
+    </div>
+
+    <div class="missions-preview">
+      <div class="missions-preview-header">
+        <div class="missions-preview-title">🎯 Misiones de la semana</div>
+        <div class="missions-preview-week" id="previewWeekLabel">—</div>
+      </div>
+      <div id="missionsPreviewList"></div>
+    </div>
+
+    <div class="alert-banner" id="alertBanner">⚠️ Son más de las 6:00 PM — cierre operativo pendiente.</div>
+    <div id="blocksContainer"></div>
+
+    <div class="eod-wrap" id="eodWrap">
+      <div class="eod-header">
+        <div class="eod-title">Cierre Operativo del Día</div>
+        <div class="eod-alert-dot" id="eodDot"></div>
+      </div>
+      <div class="eod-fields">
+        <div class="eod-row-2">
+          <div class="eod-field"><label>💰 Ingresos del día (COP)</label><input type="number" id="eodIngresos" min="0" placeholder="Ej: 500000" oninput="updateUtilidad()"></div>
+          <div class="eod-field"><label>🧾 Gastos del día (COP)</label><input type="number" id="eodGastos" min="0" placeholder="Ej: 120000" oninput="updateUtilidad()"></div>
+        </div>
+        <div class="eod-field"><label>📦 Pedidos despachados</label><input type="number" id="eodPedidos" min="0" placeholder="Ej: 12"></div>
+        <div class="eod-field"><label>✨ Utilidad neta del día</label><div class="eod-utilidad" id="eodUtilidad">$0</div></div>
+        <div class="eod-field"><label>📋 Observaciones · análisis · puntos estratégicos</label><textarea id="eodNotas" placeholder="Hallazgos del día, oportunidades identificadas, puntos ciegos para la reunión semanal..."></textarea></div>
+
+      </div>
+      <button class="save-btn" onclick="saveDay()">✓ REGISTRAR CIERRE OPERATIVO</button>
+    </div>
+  </div>
+
+  <!-- CEO MODULE VIEW -->
+  <div class="view" id="view-ceo">
+    <div class="ceo-header-strip">
+      
+      <div class="ceo-info">
+        <div class="ceo-title">Módulo CEO — Misiones Semanales</div>
+        <div class="ceo-sub">Objetivos estratégicos asignados por dirección general</div>
+        <div class="missions-progress" style="margin-top:8px;">
+          <div class="m-bar-wrap"><div class="m-bar" id="missionsBar" style="width:0%"></div></div>
+          <div class="m-bar-label" id="missionsBarLabel">0/0</div>
+        </div>
+      </div>
+      <div class="ceo-week" id="missionsWeekLabel">—</div>
+    </div>
+
+    <div id="missionsList"></div>
+
+    <!-- CEO: Kehyly daily files -->
+    <div class="chart-card" style="margin-bottom:16px;" id="ceoDailyFiles">
+      <div class="chart-title">Evidencias de Kehyly relacionadas con las Misiones — <span id="ceoFilesMonthLabel">—</span></div>
+      <div id="ceoFilesList" style="margin-top:4px;"></div>
+    </div>
+
+    <div class="add-mission-wrap">
+      <div class="add-mission-title">+ Nueva misión</div>
+      <div class="add-fields">
+        <div class="add-field"><label>Título de la misión</label><input type="text" id="missionTitle" placeholder="Ej: Cerrar propuesta con distribuidor X"></div>
+        <div class="add-field"><label>Descripción y detalle estratégico</label><textarea id="missionDesc" placeholder="¿Qué debe lograr Kehyly? ¿Cuál es el criterio de éxito? ¿Qué recursos tiene disponibles?"></textarea></div>
+      </div>
+      <button class="add-btn" onclick="addMission()">+ ASIGNAR MISIÓN</button>
+    </div>
+  </div>
+
+  <!-- STATS VIEW -->
+  <div class="view" id="view-stats">
+    <div class="stats-kpi-grid" id="statsKpiGrid"></div>
+    <div class="chart-card">
+      <div class="chart-title">Ingresos vs Gastos — <span id="chartMonthLabel">—</span></div>
+      <div class="chart-wrap"><canvas id="chartIngGastos"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Pedidos despachados — <span id="chartMonthLabel2">—</span></div>
+      <div class="chart-wrap"><canvas id="chartPedidos"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Días con notas — <span id="chartMonthLabel3">—</span></div>
+      <div class="notes-grid" id="notesCalGrid"></div>
+      <div class="note-detail" id="noteDetail"></div>
+    </div>
+    <div class="bars-wrap">
+      <div class="bars-title">Cumplimiento por tarea</div>
+      <div id="habitBars"></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR VIEW -->
+  <div class="view" id="view-calendar">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="changeMonth(-1)">←</button>
+      <div class="cal-month" id="calMonthLabel">—</div>
+      <button class="cal-nav" onclick="changeMonth(1)">→</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="day-detail" id="dayDetail"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDocs, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+// Cloudinary used instead of Firebase Storage
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCgwahtjer8A6K-2y4XcjK1oNzSL6yvn1g",
+  authDomain: "cosmo-kehyly.firebaseapp.com",
+  projectId: "cosmo-kehyly",
+  storageBucket: "cosmo-kehyly.firebasestorage.app",
+  messagingSenderId: "474322992878",
+  appId: "1:474322992878:web:01123aad4491edab83fdff"
+};
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+const SUPABASE_URL = 'https://htjuptwpjftwjjuxsavu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0anVwdHdwamZ0d2pqdXhzYXZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MTA5OTksImV4cCI6MjA4NzM4Njk5OX0.2OJ9jLASpCNV8b6M5BPRjpqGfdV7rca4N1QLJo-RaAI';
+const SUPABASE_BUCKET = 'evidencias';
+
+async function supabaseUpload(file, folder){
+  const filename = `${folder}/${Date.now()}_${file.name}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${filename}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': file.type || 'application/octet-stream',
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if(!res.ok) throw new Error('Upload failed');
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}`;
+  return { url: publicUrl, path: filename };
+}
+
+const CEO_EMAIL = 'diegocosmo@cosmo.com';
+let currentUser = null;
+let ceoUnlocked = false;
+let allData = {}, missions = [], calYear, calMonth, saveTimer = null;
+let chartIG = null, chartPed = null;
+
+// ── BLOCKS ────────────────────────────────────────────────────────────────────
+const BLOCKS = [
+  { id:'manana', label:'Bloque Mañana', time:'8:00 – 11:00 AM', color:'#6aabf0', tasks:[
+    {id:'m1',name:'Revisar redes sociales',desc:'Ver notificaciones, DMs y comentarios pendientes'},
+    {id:'m2',name:'Responder mensajes de clientes',desc:'WhatsApp, DMs, email — resolver dudas y dar seguimiento'},
+    {id:'m3',name:'Hacer facturas pendientes',desc:'Emitir facturas de pedidos nuevos y pagos recibidos'},
+    {id:'m4',name:'Montar hojas de impresión',desc:'Preparar archivos listos para imprimir (meta: antes de 9:30 AM)'},
+    {id:'m5',name:'Imprimir material del día',desc:'Ejecutar impresión del material necesario para producción y resina'},
+    {id:'m6',name:'Diseños y solicitudes de clientes',desc:'Atender peticiones de diseño personalizado o actualización de catálogo'},
+    {id:'m7',name:'Revisar y avanzar contenido del día',desc:'Revisar planificación de contenido y comenzar a trabajar en él'},
+  ]},
+  { id:'tarde', label:'Bloque Tarde', time:'2:00 – 4:00 PM', color:'#a98df5', tasks:[
+    {id:'t1',name:'Terminar de alistar pedidos',desc:'Completar empaque y organización de todos los pedidos'},
+    {id:'t2',name:'Despacho final',desc:'Pedidos listos, etiquetados y preparados para envío',countable:true,unit:'pedidos'},
+  ]},
+  { id:'redes', label:'Redes & Comunidad', time:'4:00 – 5:00 PM', color:'#5ecb82', tasks:[
+    {id:'r1',name:'Interactuar con distribuidores y aliadas',desc:'Comentar, responder y reaccionar en cuentas estratégicas'},
+    {id:'r2',name:'Interactuar con embajadoras',desc:'Dar seguimiento y fortalecer relación con embajadoras de marca'},
+    {id:'r3',name:'Subir contenido del día',desc:'Publicar el contenido planificado en todas las plataformas'},
+    {id:'r4',name:'Registrar ideas y observaciones',desc:'Anotar inspiraciones, tendencias o hallazgos del día'},
+  ]},
+  { id:'misiones', label:'Misiones del CEO', time:'5:00 – 6:30 PM', color:'#f0a06a', tasks:[
+    {id:'mi1',name:'Avanzar en misiones semanales asignadas',desc:'Objetivos estratégicos asignados por el CEO esta semana'},
+  ]},
+];
+const ALL_TASKS = BLOCKS.flatMap(b=>b.tasks.map(t=>({...t,blockId:b.id,blockLabel:b.label})));
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const WDAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+const TODAY=todayKey();
+function emptyDay(){return{tasks:{},counts:{},pedidos:'',ingresos:'',gastos:'',notas:''};}
+function dayData(k){if(!allData[k])allData[k]=emptyDay();return allData[k];}
+function getWeekKey(){const d=new Date(),j=new Date(d.getFullYear(),0,1),w=Math.ceil(((d-j)/86400000+j.getDay()+1)/7);return`${d.getFullYear()}-W${String(w).padStart(2,'0')}`;}
+function getWeekLabel(){const d=new Date(),day=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));const sun=new Date(mon);sun.setDate(mon.getDate()+6);return`${mon.getDate()} – ${sun.getDate()} ${MONTHS[sun.getMonth()]}`;}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if(user){
+    currentUser = user;
+    document.getElementById('userEmailChip').textContent = user.email;
+    await fbLoad();
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.add('visible');
+    initApp();
+  } else {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('mainApp').classList.remove('visible');
+  }
+});
+
+window.doLogin = async function(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginError');
+  if(!email||!pass){err.textContent='Completa todos los campos.';err.classList.add('visible');return;}
+  btn.disabled=true; btn.textContent='VERIFICANDO...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    err.classList.remove('visible');
+  } catch(e) {
+    err.classList.add('visible');
+    btn.disabled=false; btn.textContent='INGRESAR AL SISTEMA';
+  }
+};
+
+window.doLogout = async function(){
+  ceoUnlocked = false;
+  await signOut(auth);
+};
+
+// ── CEO MODULE AUTH ───────────────────────────────────────────────────────────
+window.handleCeoTab = function(btn){
+  // If current user IS the CEO, grant direct access
+  if(currentUser && currentUser.email === CEO_EMAIL){
+    ceoUnlocked = true;
+  }
+  if(ceoUnlocked){ switchTab('ceo',btn); return; }
+  window._ceoTabBtn = btn;
+  document.getElementById('ceoEmail').value='';
+  document.getElementById('ceoPassword').value='';
+  document.getElementById('ceoModalError').classList.remove('visible');
+  document.getElementById('ceoModal').classList.add('visible');
+  setTimeout(()=>document.getElementById('ceoEmail').focus(),100);
+};
+
+window.checkCeoLogin = async function(){
+  const email = document.getElementById('ceoEmail').value.trim();
+  const pass  = document.getElementById('ceoPassword').value;
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    if(cred.user.email === CEO_EMAIL){
+      ceoUnlocked = true;
+      document.getElementById('ceoModal').classList.remove('visible');
+      switchTab('ceo', window._ceoTabBtn);
+    } else {
+      document.getElementById('ceoModalError').classList.add('visible');
+      document.getElementById('ceoPassword').classList.add('shake');
+      setTimeout(()=>document.getElementById('ceoPassword').classList.remove('shake'),400);
+    }
+  } catch(e){
+    document.getElementById('ceoModalError').classList.add('visible');
+    document.getElementById('ceoPassword').classList.add('shake');
+    setTimeout(()=>document.getElementById('ceoPassword').classList.remove('shake'),400);
+  }
+};
+
+window.closeCeoModal = function(){
+  document.getElementById('ceoModal').classList.remove('visible');
+};
+
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+async function fbLoad(){
+  try{const s=await getDocs(collection(db,'days'));s.forEach(d=>{allData[d.id]=d.data();});}catch(e){}
+  try{const m=await getDoc(doc(db,'missions',getWeekKey()));missions=m.exists()?m.data().list||[]:[]; }catch(e){missions=[];}
+}
+async function fbSaveDay(k){setSyncBadge('syncing');try{await setDoc(doc(db,'days',k),allData[k]);setSyncBadge('ok');}catch(e){setSyncBadge('error');}}
+async function fbSaveMissions(){setSyncBadge('syncing');try{await setDoc(doc(db,'missions',getWeekKey()),{list:missions});setSyncBadge('ok');}catch(e){setSyncBadge('error');}}
+function scheduleSave(k){setSyncBadge('syncing');clearTimeout(saveTimer);saveTimer=setTimeout(()=>fbSaveDay(k),900);}
+function setSyncBadge(s){
+  const el=document.getElementById('syncBadge');el.className='sync-badge';
+  if(s==='syncing'){el.classList.add('syncing');el.textContent='↑ sincronizando...';}
+  else if(s==='error'){el.classList.add('error');el.textContent='✕ error';}
+  else el.textContent='● sincronizado';
+}
+
+// ── BIO ───────────────────────────────────────────────────────────────────────
+window.toggleBio=function(){document.getElementById('roleBio').classList.toggle('visible');};
+window.updateUtilidad=function(){
+  const ing=Number(document.getElementById('eodIngresos').value)||0;
+  const gas=Number(document.getElementById('eodGastos').value)||0;
+  const util=ing-gas;
+  const el=document.getElementById('eodUtilidad');
+  el.textContent=`$${util.toLocaleString('es-CO')}`;
+  el.className='eod-utilidad'+(util<0?' negative':'');
+};
+
+// ── CURRENT BLOCK ─────────────────────────────────────────────────────────────
+function getCurrentBlock(){
+  const mins=new Date().getHours()*60+new Date().getMinutes();
+  if(mins>=8*60&&mins<11*60)    return{id:'manana',  label:'🌅 Bloque Mañana'};
+  if(mins>=14*60&&mins<16*60)   return{id:'tarde',   label:'📦 Bloque Tarde'};
+  if(mins>=16*60&&mins<17*60)   return{id:'redes',   label:'📱 Redes & Comunidad'};
+  if(mins>=17*60&&mins<18*60+30)return{id:'misiones',label:'🎯 Misiones CEO'};
+  return null;
+}
+
+// ── MISSIONS ──────────────────────────────────────────────────────────────────
+function renderMissionsPreview(){
+  document.getElementById('previewWeekLabel').textContent=getWeekLabel();
+  const list=document.getElementById('missionsPreviewList');
+  if(!missions.length){list.innerHTML=`<div class="no-missions-msg">Sin misiones asignadas esta semana.</div>`;return;}
+  list.innerHTML=missions.map(m=>{
+    const fileCount=(m.evidence||[]).length;
+    return`<div class="mission-mini">
+      <div class="mission-mini-check ${m.done?'done':''}" onclick="toggleMissionPreview('${m.id}')">${m.done?'✓':''}</div>
+      <div class="mission-mini-body">
+        <div class="mission-mini-name ${m.done?'done':''}">${m.title}</div>
+        ${m.desc?`<div class="mission-mini-desc">${m.desc}</div>`:''}
+      </div>
+      <div class="mission-mini-upload">
+        <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="uploadMissionEvidence('${m.id}',this)">
+        <div class="upload-icon-btn ${fileCount>0?'has-files':''}" title="Subir evidencia">📎</div>
+        ${fileCount>0?`<div class="mini-file-count">${fileCount} arch.</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.toggleMissionPreview=async function(id){
+  const m=missions.find(x=>x.id===id);
+  if(m){m.done=!m.done;await fbSaveMissions();renderMissionsPreview();if(document.getElementById('view-ceo').classList.contains('active'))renderMissionsView();}
+};
+
+function renderMissionsView(){
+  document.getElementById('missionsWeekLabel').textContent=`Semana ${getWeekLabel()}`;
+  const done=missions.filter(m=>m.done).length,total=missions.length,pct=total?Math.round(done/total*100):0;
+  document.getElementById('missionsBar').style.width=pct+'%';
+  document.getElementById('missionsBarLabel').textContent=`${done}/${total}`;
+  const list=document.getElementById('missionsList');
+  if(!missions.length){
+    list.innerHTML=`<div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px;font-style:italic;">Sin misiones asignadas esta semana.</div>`;
+    return;
+  }
+  list.innerHTML=missions.map(m=>`
+    <div class="mission-card ${m.done?'done':''}" id="mcard-${m.id}">
+      <div class="mission-card-top">
+        <button class="m-check-btn" onclick="toggleMission('${m.id}')">${m.done?'✓':''}</button>
+        <div class="mission-card-body">
+          <div class="mission-card-title">${m.title}</div>
+          ${m.desc?`<div class="mission-card-desc">${m.desc}</div>`:''}
+        </div>
+        <button class="m-del-btn" onclick="deleteMission('${m.id}')">✕</button>
+      </div>
+      ${(m.evidence||[]).length>0?`
+      <div class="evidence-section">
+        <div class="evidence-label">📎 Evidencias subidas por Kehyly</div>
+        <div class="evidence-list">
+          ${(m.evidence||[]).map(e=>`
+            <div class="evidence-item">
+              <span class="evidence-icon">${getFileIcon(e.name)}</span>
+              <span class="evidence-name">${e.name}</span>
+              <a class="evidence-link" href="${getFileUrl(e.url,e.name)}" target="_blank">${getLinkLabel(e.name)}</a>
+              <button class="evidence-del" onclick="deleteEvidence('${m.id}','${e.path}')">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>`:''}
+    </div>`).join('');
+}
+
+function getFileIcon(name){
+  const ext=(name||'').split('.').pop().toLowerCase();
+  if(['jpg','jpeg','png','gif','webp'].includes(ext))return'🖼️';
+  if(ext==='pdf')return'📄';
+  if(['doc','docx'].includes(ext))return'📝';
+  if(['xls','xlsx'].includes(ext))return'📊';
+  return'📎';
+}
+
+function getFileUrl(url, filename){
+  // Supabase URLs work directly for all file types
+  return url;
+}
+
+function getLinkLabel(filename){
+  const ext=(filename||'').split('.').pop().toLowerCase();
+  const isImage=['jpg','jpeg','png','gif','webp'].includes(ext);
+  return isImage ? '🔍 Ver' : '⬇ Descargar';
+}
+
+window.toggleMission=async function(id){
+  const m=missions.find(x=>x.id===id);
+  if(m){m.done=!m.done;await fbSaveMissions();renderMissionsView();renderMissionsPreview();showToast('Misión actualizada');}
+};
+window.deleteMission=async function(id){
+  missions=missions.filter(x=>x.id!==id);
+  await fbSaveMissions();renderMissionsView();renderMissionsPreview();
+};
+window.addMission=async function(){
+  const title=document.getElementById('missionTitle').value.trim();
+  const desc=document.getElementById('missionDesc').value.trim();
+  if(!title){showToast('Escribe el título de la misión',true);return;}
+  missions.push({id:Date.now().toString(),title,desc,done:false,evidence:[]});
+  document.getElementById('missionTitle').value='';document.getElementById('missionDesc').value='';
+  await fbSaveMissions();renderMissionsView();renderMissionsPreview();showToast('✓ Misión asignada');
+};
+
+// ── FILE UPLOAD ───────────────────────────────────────────────────────────────
+// ── MISSION EVIDENCE UPLOAD (Supabase) ────────────────────────────────────────
+window.uploadMissionEvidence=async function(missionId, input){
+  const files=Array.from(input.files); if(!files.length)return;
+  const m=missions.find(x=>x.id===missionId); if(!m)return;
+  if(!m.evidence)m.evidence=[];
+  showToast('Subiendo evidencia...');
+  for(const file of files){
+    try{
+      const {url, path} = await supabaseUpload(file, `missions/${missionId}`);
+      m.evidence.push({name:file.name, url, path, ts:new Date().toISOString()});
+    }catch(e){showToast(`Error subiendo: ${file.name}`,true);}
+  }
+  input.value='';
+  await fbSaveMissions();
+  renderMissionsPreview();
+  if(document.getElementById('view-ceo').classList.contains('active'))renderMissionsView();
+  showToast(`✓ ${files.length} evidencia(s) subida(s)`);
+};
+
+window.deleteEvidence=async function(missionId, filePath){
+  const m=missions.find(x=>x.id===missionId); if(!m)return;
+  // Delete from Supabase
+  try{
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${filePath}`,{
+      method:'DELETE',
+      headers:{'Authorization':`Bearer ${SUPABASE_KEY}`}
+    });
+  }catch(e){}
+  m.evidence=(m.evidence||[]).filter(e=>e.path!==filePath);
+  await fbSaveMissions();
+  renderMissionsView();
+  renderMissionsPreview();
+  showToast('Evidencia eliminada');
+};
+
+// ── RENDER DAY ────────────────────────────────────────────────────────────────
+function renderDay(){
+  const dd=dayData(TODAY),cb=getCurrentBlock();
+  document.getElementById('currentBlockChip').textContent=cb?cb.label:'— Fuera de horario operativo';
+  const h=new Date().getHours();
+  if(h>=18&&!dd.savedAt){
+    document.getElementById('alertBanner').classList.add('visible');
+    document.getElementById('eodWrap').classList.add('alert');
+    document.getElementById('eodDot').classList.add('visible');
+  }
+  renderMissionsPreview();
+  const container=document.getElementById('blocksContainer');
+  let html='';
+  BLOCKS.forEach((block,bi)=>{
+    const bdone=block.tasks.filter(t=>dd.tasks[t.id]).length;
+    const isActive=cb&&cb.id===block.id,isOpen=isActive||bi===0;
+    html+=`<div class="block-wrap"><div class="block-header ${isOpen?'open':''}" onclick="toggleBlock(this)">
+      <div class="block-time">${block.time}</div>
+      <div class="block-pill ${isActive?'active-block':''}">
+        <div class="block-dot" style="background:${block.color}"></div>
+        <div class="block-name">${block.label}</div>
+        <div class="block-pct" style="color:${block.color}">${bdone}/${block.tasks.length}</div>
+        <div class="block-chevron">▾</div>
+      </div></div>
+      <div class="block-tasks ${isOpen?'open':''}">`;
+    block.tasks.forEach(t=>{
+      const done=!!dd.tasks[t.id],cv=dd.counts[t.id]||'';
+      html+=`<div class="task-card ${done?'done':''}" id="card-${t.id}">
+        <button class="check-btn" onclick="toggleTask('${t.id}')">${done?'✓':''}</button>
+        <div class="task-body"><div class="task-name">${t.name}</div><div class="task-desc">${t.desc}</div></div>`;
+      if(t.countable)html+=`<div class="task-count-wrap"><input class="count-input" type="number" min="0" placeholder="0" value="${cv}" oninput="updateCount('${t.id}',this.value)" onclick="event.stopPropagation()"><div class="count-lbl">${t.unit}</div></div>`;
+      html+=`</div>`;
+    });
+    html+=`</div></div>`;
+    if(bi===0)html+=`<div class="block-divider"><div class="block-divider-line"></div><div class="block-divider-label">Pausa 11AM – 2PM</div><div class="block-divider-line"></div></div>`;
+  });
+  container.innerHTML=html;
+  document.getElementById('eodIngresos').value=dd.ingresos||'';
+  document.getElementById('eodGastos').value=dd.gastos||'';
+  document.getElementById('eodPedidos').value=dd.pedidos||'';
+  document.getElementById('eodNotas').value=dd.notas||'';
+  updateUtilidad();updateProgress();
+}
+window.toggleBlock=function(h){h.classList.toggle('open');h.nextElementSibling.classList.toggle('open');};
+window.toggleTask=function(id){
+  const dd=dayData(TODAY);dd.tasks[id]=!dd.tasks[id];
+  const card=document.getElementById('card-'+id),done=dd.tasks[id];
+  card.classList.toggle('done',done);card.querySelector('.check-btn').textContent=done?'✓':'';
+  updateProgress();scheduleSave(TODAY);
+};
+window.updateCount=function(id,val){dayData(TODAY).counts[id]=val;scheduleSave(TODAY);};
+
+function updateProgress(){
+  const dd=dayData(TODAY),total=ALL_TASKS.length;
+  const done=ALL_TASKS.filter(t=>dd.tasks[t.id]).length,pct=total?Math.round(done/total*100):0;
+  document.getElementById('pctText').textContent=pct+'%';
+  document.getElementById('progSub').textContent=`${done} de ${total} tareas completadas`;
+  const circ=2*Math.PI*27;
+  document.getElementById('ringFill').style.strokeDashoffset=circ-(pct/100)*circ;
+  let title='Iniciando operaciones';const h=new Date().getHours();
+  if(pct===100)title='Operaciones completadas ✓';
+  else if(pct>=80)title='Cierre de operaciones en curso';
+  else if(pct>=50)title='Ejecución en progreso';
+  else if(pct>0&&h>=14)title='Bloque de tarde activo';
+  else if(pct>0)title='Agenda en ejecución';
+  document.getElementById('progTitle').textContent=title;
+  BLOCKS.forEach(block=>{
+    const bd=block.tasks.filter(t=>dd.tasks[t.id]).length;
+    document.querySelectorAll('.block-name').forEach(el=>{if(el.textContent===block.label){const p=el.nextElementSibling;if(p)p.textContent=`${bd}/${block.tasks.length}`;}});
+  });
+}
+window.saveDay=async function(){
+  const dd=dayData(TODAY);
+  dd.ingresos=document.getElementById('eodIngresos').value;
+  dd.gastos=document.getElementById('eodGastos').value;
+  dd.pedidos=document.getElementById('eodPedidos').value;
+  dd.notas=document.getElementById('eodNotas').value;
+  dd.savedAt=new Date().toISOString();
+  // Save a snapshot of completed tasks for historical calendar view
+  dd.tasksSnapshot=Object.assign({}, dd.tasks);
+  dd.countsSnapshot=Object.assign({}, dd.counts);
+  // Now reset for next day
+  dd.tasks={};
+  dd.counts={};
+  document.getElementById('alertBanner').classList.remove('visible');
+  document.getElementById('eodWrap').classList.remove('alert');
+  document.getElementById('eodDot').classList.remove('visible');
+  clearTimeout(saveTimer);await fbSaveDay(TODAY);
+  renderDay();
+  showToast('✓ Cierre registrado — tareas reiniciadas para mañana');
+};
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function renderStats(){
+  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  ['chartMonthLabel','chartMonthLabel2','chartMonthLabel3'].forEach(id=>document.getElementById(id).textContent=`${MONTHS[month]} ${year}`);
+  const labels=[],ingData=[],gasData=[],pedData=[];
+  for(let d=1;d<=daysInMonth;d++){
+    const key=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const data=allData[key]||emptyDay();
+    labels.push(d);ingData.push(Number(data.ingresos)||0);gasData.push(Number(data.gastos)||0);pedData.push(Number(data.pedidos)||0);
+  }
+  const keys=Object.keys(allData);
+  let totIng=0,totGas=0,totPed=0,streak=0;
+  const tc={};ALL_TASKS.forEach(t=>tc[t.id]=0);
+  keys.forEach(k=>{const d=allData[k];totIng+=Number(d.ingresos)||0;totGas+=Number(d.gastos)||0;totPed+=Number(d.pedidos)||0;ALL_TASKS.forEach(t=>{if((d.tasks||{})[t.id])tc[t.id]++;});});
+  const dNow=new Date();
+  for(let i=0;i<365;i++){
+    const k=`${dNow.getFullYear()}-${String(dNow.getMonth()+1).padStart(2,'0')}-${String(dNow.getDate()).padStart(2,'0')}`;
+    const d=allData[k]||emptyDay();
+    if(ALL_TASKS.filter(t=>(d.tasks||{})[t.id]).length>0){streak++;dNow.setDate(dNow.getDate()-1);}else break;
+  }
+  const utilidad=totIng-totGas;
+  const avgPct=keys.length>0?Math.round(ALL_TASKS.reduce((s,t)=>s+tc[t.id],0)/(keys.length*ALL_TASKS.length)*100):0;
+  document.getElementById('statsKpiGrid').innerHTML=`
+    <div class="kpi-card"><div class="kpi-val">${streak}</div><div class="kpi-label">Racha actual</div></div>
+    <div class="kpi-card"><div class="kpi-val">${keys.length}</div><div class="kpi-label">Días registrados</div></div>
+    <div class="kpi-card"><div class="kpi-val">${totPed}</div><div class="kpi-label">Pedidos totales</div></div>
+    <div class="kpi-card"><div class="kpi-val green">$${(totIng/1000).toFixed(0)}k</div><div class="kpi-label">Ingresos acum.</div></div>
+    <div class="kpi-card"><div class="kpi-val red">$${(totGas/1000).toFixed(0)}k</div><div class="kpi-label">Gastos acum.</div></div>
+    <div class="kpi-card"><div class="kpi-val ${utilidad<0?'red':'green'}">$${(utilidad/1000).toFixed(0)}k</div><div class="kpi-label">Utilidad neta</div></div>
+    <div class="kpi-card"><div class="kpi-val">${avgPct}%</div><div class="kpi-label">Cumplimiento</div></div>`;
+  const ctx1=document.getElementById('chartIngGastos').getContext('2d');
+  if(chartIG)chartIG.destroy();
+  chartIG=new Chart(ctx1,{type:'bar',data:{labels,datasets:[
+    {label:'Ingresos',data:ingData,backgroundColor:'rgba(94,203,130,.6)',borderColor:'rgba(94,203,130,1)',borderWidth:1,borderRadius:4},
+    {label:'Gastos',data:gasData,backgroundColor:'rgba(232,107,107,.5)',borderColor:'rgba(232,107,107,1)',borderWidth:1,borderRadius:4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#686878',font:{size:11}}}},scales:{x:{ticks:{color:'#686878',font:{size:9}},grid:{color:'rgba(37,37,48,.5)'}},y:{ticks:{color:'#686878',font:{size:9},callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'rgba(37,37,48,.5)'}}}}});
+  const ctx2=document.getElementById('chartPedidos').getContext('2d');
+  if(chartPed)chartPed.destroy();
+  chartPed=new Chart(ctx2,{type:'bar',data:{labels,datasets:[{label:'Pedidos',data:pedData,backgroundColor:'rgba(106,171,240,.55)',borderColor:'rgba(106,171,240,1)',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#686878',font:{size:11}}}},scales:{x:{ticks:{color:'#686878',font:{size:9}},grid:{color:'rgba(37,37,48,.5)'}},y:{ticks:{color:'#686878',font:{size:9}},grid:{color:'rgba(37,37,48,.5)'},beginAtZero:true}}}});
+  renderNotesCalendar(year,month,daysInMonth);
+  let bars='';ALL_TASKS.forEach(t=>{const pct=keys.length>0?Math.round((tc[t.id]/keys.length)*100):0;bars+=`<div class="hstat-row"><div class="hstat-name" title="${t.name}">${t.name}</div><div class="hstat-bar-wrap"><div class="hstat-bar" style="width:${pct}%"></div></div><div class="hstat-pct">${pct}%</div></div>`;});
+  document.getElementById('habitBars').innerHTML=bars;
+}
+function renderNotesCalendar(year,month,daysInMonth){
+  const today=todayKey(),firstDay=new Date(year,month,1).getDay();
+  let html=WDAYS.map(d=>`<div class="note-day-name">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++)html+=`<div class="note-cell empty-cell"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const key=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const data=allData[key]||emptyDay();
+    const hasNote=!!(data.notas&&data.notas.trim());
+    html+=`<div class="note-cell ${hasNote?'has-note':''} ${key===today?'today-cell':''}" onclick="showNoteDetail('${key}',${d},${month})">
+      <div class="nc-num">${d}</div>${hasNote?'<div class="nc-dot"></div>':''}
+    </div>`;
+  }
+  document.getElementById('notesCalGrid').innerHTML=html;
+}
+window.showNoteDetail=function(key,day,month){
+  const data=allData[key]||emptyDay(),panel=document.getElementById('noteDetail');
+  if(!data.notas){panel.classList.remove('visible');return;}
+  panel.innerHTML=`<div class="note-detail-date">${day} de ${MONTHS[month]} · Observaciones registradas</div><div class="note-detail-text">${data.notas}</div>`;
+  panel.classList.add('visible');
+};
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+window.changeMonth=function(dir){calMonth+=dir;if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}renderCalendar();};
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent=`${MONTHS[calMonth]} ${calYear}`;
+  const first=new Date(calYear,calMonth,1).getDay(),total=new Date(calYear,calMonth+1,0).getDate();
+  let html=WDAYS.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
+  for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=total;d++){
+    const key=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const data=allData[key]||emptyDay();
+    const hasSaved=data.savedAt||Object.keys(data.tasks||{}).length>0||Object.keys(data.tasksSnapshot||{}).length>0;
+    const hasNote=!!(data.notas&&data.notas.trim());
+    const taskSrc=data.tasksSnapshot||data.tasks||{};
+    const done=ALL_TASKS.filter(t=>taskSrc[t.id]).length;
+    const pct=ALL_TASKS.length?Math.round(done/ALL_TASKS.length*100):0;
+    html+=`<div class="cal-cell ${hasSaved?'has-data':''} ${key===TODAY?'today':''}" onclick="showDayDetail('${key}',${d})">
+      <div class="day-num">${d}</div>
+      ${hasSaved?`<div class="x-mark">✕</div><div class="pct-badge">${pct}%</div>`:''}
+      ${hasNote?'<div class="note-indicator"></div>':''}
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML=html;
+  document.getElementById('dayDetail').classList.remove('visible');
+  document.getElementById('dayDetail').innerHTML='';
+}
+window.showDayDetail=function(key,day){
+  const data=allData[key]||emptyDay(),panel=document.getElementById('dayDetail');
+  // Use snapshot if available (day was closed), otherwise use live tasks
+  const taskSource=data.tasksSnapshot||data.tasks||{};
+  const countSource=data.countsSnapshot||data.counts||{};
+  const done=ALL_TASKS.filter(t=>taskSource[t.id]).length;
+  const pct=ALL_TASKS.length?Math.round(done/ALL_TASKS.length*100):0;
+  const util=(Number(data.ingresos)||0)-(Number(data.gastos)||0);
+  let html=`<div class="detail-date">${day} de ${MONTHS[calMonth]} ${calYear} · ${done}/${ALL_TASKS.length} tareas (${pct}%)</div>`;
+  if(data.ingresos||data.gastos||data.pedidos){
+    html+=`<div class="detail-fin-row">
+      ${data.ingresos?`<div class="detail-fin-chip"><span>Ingresos</span>$${Number(data.ingresos).toLocaleString('es-CO')}</div>`:''}
+      ${data.gastos?`<div class="detail-fin-chip"><span>Gastos</span>$${Number(data.gastos).toLocaleString('es-CO')}</div>`:''}
+      ${(data.ingresos||data.gastos)?`<div class="detail-fin-chip"><span>Utilidad</span><span style="color:${util>=0?'var(--green)':'var(--red)'}">$${util.toLocaleString('es-CO')}</span></div>`:''}
+      ${data.pedidos?`<div class="detail-fin-chip"><span>Pedidos</span>${data.pedidos}</div>`:''}
+    </div>`;
+  }
+  BLOCKS.forEach(block=>{
+    html+=`<div class="detail-block-title">${block.time} · ${block.label}</div>`;
+    block.tasks.forEach(t=>{
+      const isDone=!!taskSource[t.id];
+      const count=t.countable&&countSource[t.id]?countSource[t.id]:null;
+      html+=`<div class="detail-row"><div class="${isDone?'detail-check':'detail-x'}">${isDone?'✓':'✕'}</div><div class="detail-name">${t.name}</div>${count?`<div class="detail-val">${count} ${t.unit||''}</div>`:''}</div>`;
+    });
+  });
+  if(data.notas)html+=`<div class="detail-notes"><strong>📋 Observaciones del día</strong>${data.notas}</div>`;
+  panel.innerHTML=html;panel.classList.add('visible');
+};
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+window.switchTab=function(tab,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');btn.classList.add('active');
+  if(tab==='calendar')renderCalendar();
+  if(tab==='stats')renderStats();
+  if(tab==='ceo'){renderMissionsView();renderCeoFiles();}
+};
+
+function showToast(msg,err){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'');
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+
+
+
+
+
+// ── CEO FILES VIEWER ──────────────────────────────────────────────────────────
+function renderCeoFiles(){
+  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
+  document.getElementById('ceoFilesMonthLabel').textContent=`${MONTHS[month]} ${year}`;
+  // Collect evidence from missions (not daily files)
+  const allFiles=[];
+  missions.forEach(m=>{
+    (m.evidence||[]).forEach(e=>{
+      const ts=e.ts||'';
+      const dateKey=ts?ts.substring(0,10):TODAY;
+      allFiles.push({...e, dateKey, missionTitle:m.title});
+    });
+  });
+  const list=document.getElementById('ceoFilesList');
+  if(!allFiles.length){
+    list.innerHTML=`<div style="text-align:center;padding:20px 0;color:var(--muted);font-size:13px;font-style:italic;">Kehyly no ha subido archivos aún.</div>`;
+    return;
+  }
+  // Group by date
+  const grouped={};
+  allFiles.forEach(f=>{if(!grouped[f.dateKey])grouped[f.dateKey]=[];grouped[f.dateKey].push(f);});
+  const sortedDates=Object.keys(grouped).sort().reverse();
+  list.innerHTML=sortedDates.map(dateKey=>{
+    const [y,m,d]=dateKey.split('-');
+    const label=`${parseInt(d)} de ${MONTHS[parseInt(m)-1]} ${y}`;
+    const files=grouped[dateKey];
+    return `<div style="margin-bottom:14px;">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">${label}</div>
+      ${files.map(e=>`
+        <div class="evidence-item">
+          <span class="evidence-icon">${getFileIcon(e.name)}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;color:var(--orange);font-family:'DM Mono',monospace;letter-spacing:.06em;margin-bottom:2px;">${e.missionTitle||'Sin misión'}</div>
+            <div class="evidence-name">${e.name}</div>
+          </div>
+          <a class="evidence-link" href="${getFileUrl(e.url,e.name)}" target="_blank">${getLinkLabel(e.name)}</a>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function initApp(){
+  const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+  document.getElementById('todayLabel').textContent=now.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'});
+  renderDay();
+}
+</script>
+</body>
+</html>
